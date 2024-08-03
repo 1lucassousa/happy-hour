@@ -49,6 +49,7 @@ dependencies:
   intl:
   image_picker: ^0.8.5
   flutter_modular: ^5.0.3
+  brasil_fields:
 
 dev_dependencies:
   flutter_test:

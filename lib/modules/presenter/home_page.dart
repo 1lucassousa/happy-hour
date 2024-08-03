@@ -1,8 +1,11 @@
+import 'package:brasil_fields/brasil_fields.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:happy_hour/modules/domain/entities/usuario.dart';
+import 'package:happy_hour/modules/presenter/history_page.dart';
 import 'package:happy_hour/modules/util/widgets.dart';
+import 'package:intl/intl.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,6 +19,8 @@ class _HomePageState extends State<HomePage> {
   final _ctrlValor = TextEditingController();
   List<Usuario> users = [];
 
+  final DateFormat formatter = DateFormat('dd/MM/yyyy HH:mm:ss');
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -23,6 +28,19 @@ class _HomePageState extends State<HomePage> {
         title: const Center(
           child: Text('Happy Hour'),
         ),
+        leading: const Icon(
+          Icons.history,
+          color: Colors.transparent,
+        ),
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => const HistoryPage()));
+            },
+            icon: const Icon(Icons.history),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -82,6 +100,17 @@ class _HomePageState extends State<HomePage> {
                                             'countChopp':
                                                 users[index].countChopp - 1
                                           }));
+
+                                      await FirebaseFirestore.instance.
+                                          collection('history')
+                                          .doc(DateTime.now().toString())
+                                          .set(
+                                            ({
+                                              'id': DateTime.now().toString(),
+                                              'action':
+                                                  "${users[index].name} removeu um chopp as ${formatter.format(DateTime.now())}",
+                                            }),
+                                          );
                                     }
                                   },
                                   icon: const Icon(Icons.remove)),
@@ -97,6 +126,17 @@ class _HomePageState extends State<HomePage> {
                                           'countChopp':
                                               users[index].countChopp + 1
                                         }));
+
+                                    await FirebaseFirestore.instance
+                                        .collection('history')
+                                        .doc(DateTime.now().toString())
+                                        .set(
+                                          ({
+                                            'id': DateTime.now().toString(),
+                                            'action':
+                                                "${users[index].name} pediu um chopp as ${formatter.format(DateTime.now())}",
+                                          }),
+                                        );
                                   },
                                   icon: const Icon(Icons.add)),
                             ],
@@ -171,10 +211,7 @@ class _HomePageState extends State<HomePage> {
         validator: validator,
         keyboardType: TextInputType.number,
         decoration: InputDecoration(
-          suffixIcon: IconButton(
-            onPressed: () async {},
-            icon: const Icon(Icons.money),
-          ),
+          suffixIcon: const Icon(Icons.money),
           labelStyle: const TextStyle(
             color: Colors.grey,
             fontWeight: FontWeight.w600,
@@ -183,7 +220,8 @@ class _HomePageState extends State<HomePage> {
           labelText: label,
         ),
         inputFormatters: [
-          FilteringTextInputFormatter.deny(RegExp(r',')),
+          FilteringTextInputFormatter.digitsOnly,
+          CentavosInputFormatter(),
         ],
         onFieldSubmitted: (value) async {
           setState!(() {});
@@ -197,13 +235,11 @@ class _HomePageState extends State<HomePage> {
         style: ElevatedButton.styleFrom(
           backgroundColor: defaultColor,
         ),
-        onPressed: users.isEmpty
-            ? null
-            : () async {
-                if (users.isNotEmpty) {
-                  dialog(context);
-                }
-              },
+        onPressed: () async {
+          if (users.isNotEmpty) {
+            dialog(context);
+          }
+        },
         child: const Text(
           'Fechar a conta',
           style: TextStyle(
@@ -270,7 +306,7 @@ class _HomePageState extends State<HomePage> {
                                                       fontWeight:
                                                           FontWeight.bold)),
                                               Text(
-                                                  ("R\$ ${(users[index].countChopp * double.parse(_ctrlValor.text)).toStringAsFixed(2)}"),
+                                                  ("R\$ ${(users[index].countChopp * double.parse(_ctrlValor.text.replaceAll(',', '.'))).toStringAsFixed(2).replaceAll('.', ',')}"),
                                                   style: const TextStyle(
                                                       fontWeight:
                                                           FontWeight.bold)),
